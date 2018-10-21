@@ -1,45 +1,53 @@
-$triggerWords = "finance", "cash", "swift", "bank transfer", "swift", "banking", "financial", "@gmail.com", "MS-Charts", "IBAN", "payment", "invoice", "accounts"
-$unusualFolders = "RSS Feeds", "RSS Subscriptions", "Deleted Items", "Junk Email"
+$triggerWords = "Finance", "Cash", "swift", "bank transfer", "swift", "banking", "financial", "@gmail.com", "@yahoo.com", "@yahoo.co.uk", "@mailinator.com", "MS-Charts", "IBAN", "payment", "invoice", "accounts"
+$unusualFolders = "RSS Feeds", "RSS Subscriptions", "Deleted Items", "Junk Email", "Drafts", "Junk", "SMS"
 $allRules = get-InboxRule
+$allMailboxes = get-mailbox -resultSize Unlimited
+function Compare-Similar ($obj1, $obj2)
+{
+    $obj1| % {
+        $c = $_
+        $obj2| % {
+            if ($c -match $_)
+            {
+                "[$_] : $c"
+            }
+        }
+    }
+}
 
 $allRules| ForEach-Object {
     $mbName = $_.MailboxOwnerID
     $ruleName = $_.Name
-    $subjectMatch = Compare-Similar $_.SubjectContainsWords $triggerWords 
+    $subjectMatch = Compare-Similar $_.SubjectContainsWords $triggerWords
     if ($subjectMatch)
     {
-        "Subject Match: $mbName : $ruleName : $subjectMatch"
-    }}
-$allRules| ForEach-Object {
-    $mbName = $_.MailboxOwnerID
-    $ruleName = $_.Name
-    $bodyMatch = Compare-Similar $_.BodyContainsWords $triggerWords 
+        write-host -BackgroundColor Red -ForegroundColor White "$mbName" -NoNewline
+        write-host " - Subject Match: $ruleName : $subjectMatch"
+    }
+
+    $bodyMatch = Compare-Similar $_.BodyContainsWords $triggerWords
     if ($bodyMatch)
     {
-        "Body Match: $mbName : $ruleName : $bodyMatch"
-    }}
-$allRules| ForEach-Object {
-    $mbName = $_.MailboxOwnerID
-    $ruleName = $_.Name
-    $subjectbodyMatch = Compare-Similar $_.SubjectOrBodyContainsWords $triggerWords 
+        write-host -BackgroundColor Red -ForegroundColor White "$mbName" -NoNewline
+        write-host " - Body Match: $ruleName : $bodyMatch"
+    }
+
+    $subjectbodyMatch = Compare-Similar $_.SubjectOrBodyContainsWords $triggerWords
     if ($subjectbodyMatch)
     {
-        "Subject or Body Match: $mbName : $ruleName : $subjectbodyMatch"
-    }}
+        write-host -BackgroundColor Red -ForegroundColor White "$mbName" -NoNewline
+        write-host " - Subject or Body Match: $ruleName : $subjectbodyMatch"
+    }
 
-$allRules| ForEach-Object {
     if ($_.MoveToFolder)
     {
-        $mbName = $_.MailboxOwnerID
-        $ruleName = $_.Name
-        $folderMatch = Compare-Similar $_.MoveToFolder $unusualFolders 
+        $folderMatch = Compare-Similar $_.MoveToFolder $unusualFolders
         if ($folderMatch)
         {
-            "Folder Match: $mbName : $ruleName : $folderMatch"
+            write-host -BackgroundColor Red -ForegroundColor White "$mbName" -NoNewline
+            write-host " - Folder Match: $ruleName : $folderMatch"
         }
-    }}
-
-$allRules| ForEach-Object {
+    }
     if ($_.ForwardTo)
     {
         $mbName = $_.MailboxOwnerID
@@ -50,20 +58,14 @@ $allRules| ForEach-Object {
                 if ($_ -like "*SMTP*")
                 {
                     $forwarderMatch = $_
-                    "Forwarder Match: $mbName : $ruleName : $forwarderMatch"
+                    write-host -BackgroundColor Red -ForegroundColor White "$mbName" -NoNewline
+                    write-host " - Forwarding Rule Match: $ruleName : $forwarderMatch"
                 }
             }
         }
     }
 }
-
-function Compare-Similar ($obj1, $obj2)
-{
-    $obj1| % {$c = $_; $obj2| % {if ($c -match $_)
-            {
-                "$c - $_"
-            }
-        }
-    }
+$allMailboxes|Where-Object {$_.ForwardingSmtpAddress} |%{
+    write-host -BackgroundColor Red -ForegroundColor White $_.Name -NoNewline
+    write-host "$($_.ForwardingSmtpAddress) - $($_.DeliverToMailboxAndForward)"
 }
-
