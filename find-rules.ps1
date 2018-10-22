@@ -1,6 +1,7 @@
 $triggerWords = "Finance", "Cash", "swift", "bank transfer", "swift", "banking", "financial", "@gmail.com", "@yahoo.com", "@yahoo.co.uk", "@mailinator.com", "MS-Charts", "IBAN", "payment", "invoice", "accounts"
 $unusualFolders = "RSS Feeds", "RSS Subscriptions", "Deleted Items", "Junk Email", "Drafts", "Junk", "SMS"
-$allRules = get-InboxRule
+$allRules = $allMailboxes|%{get-InboxRule -mailbox $_.Name}
+write-host "H"
 $allMailboxes = get-mailbox -resultSize Unlimited
 function Compare-Similar ($obj1, $obj2)
 {
@@ -69,3 +70,4 @@ $allMailboxes|Where-Object {$_.ForwardingSmtpAddress} |%{
     write-host -BackgroundColor Red -ForegroundColor White $_.Name -NoNewline
     write-host "$($_.ForwardingSmtpAddress) - $($_.DeliverToMailboxAndForward)"
 }
+
