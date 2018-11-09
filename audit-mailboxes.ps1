@@ -1,11 +1,14 @@
-$mailboxes = get-mailbox -resultsize unlimited -Filter {RecipientTypeDetails -ne "DiscoveryMailbox"}
-$mailboxes|Add-Member -MemberType NoteProperty -Name "MFANumber" -value ""
+try {Get-MsolDomain -ErrorAction stop} catch {Write-Error -Category AuthenticationError  -Message "Exchange Online Not Connected" -RecommendedAction "Check readme file for instructions" -TargetObject "Office365 Exchange"  -CategoryTargetName "NotConnected" -CategoryTargetType "Online Services";exit} # Determine if MS Online services is connected
+try {Get-Mailbox -resultsize 1 -ErrorAction stop} catch {Write-Error -Category AuthenticationError  -Message "Exchange Online Not Connected" -RecommendedAction "Check readme file for instructions" -TargetObject "Office365 Exchange"  -CategoryTargetName "NotConnected" -CategoryTargetType "Online Services";exit} # Determine if Exchange sessions is connected
+
+$mailboxes = get-mailbox -resultsize unlimited -Filter {RecipientTypeDetails -ne "DiscoveryMailbox"} #Get all mailboxes except discovery mailboxes
+$mailboxes|Add-Member -MemberType NoteProperty -Name "MFAEnabled" -value "" # Add extra properties to mailbox object
 $mailboxes|Add-Member -MemberType NoteProperty -Name "DelegatedAccess" -value ""
 $mailboxes|Add-Member -MemberType NoteProperty -Name "Office365Administrator" -value ""
 $admins = Get-MsolRoleMember -RoleObjectId (Get-MsolRole -RoleName "Company Administrator").ObjectId
-$mb = $mailboxes| ForEach-Object {
+$mb = $mailboxes| ForEach-Object { # For each mailbox
     $upn = $_.UserPrincipalName
-    if ($admins|Where-Object {$_.EmailAddress -eq $upn})
+    if ($admins|Where-Object {$_.EmailAddress -eq $upn}) # If user matches a global admin then flag as admin
     {
         $_.Office365Administrator = $true
     }
@@ -21,4 +24,4 @@ $mb = $mailboxes| ForEach-Object {
     }
     return $_
 }
-$mb|select-object UserPrincipalName, MFANumber, DelegatedAccess, auditenabled, Office365Administrator|export-excel -IncludePivotTable -PivotRows AuditEnabled -PivotData @{UserPrincipalName = "count"} -IncludePivotChart -ChartType Doughnut -Show -Path ".\out.xlsx"
+$mb|select-object UserPrincipalName, MFAEnabled, DelegatedAccess, auditenabled, Office365Administrator|export-excel -IncludePivotTable -PivotRows AuditEnabled -PivotData @{UserPrincipalName = "count"} -IncludePivotChart -ChartType Doughnut -Show -Path ".\out.xlsx"
